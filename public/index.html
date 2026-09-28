@@ -3,35 +3,58 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>腳本上傳</title>
+<title>腳本管理</title>
 <style>
   :root {
-    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
-    --text: #e8eaed; --text-dim: #9aa1ac; --accent: #5b8cff;
+    --bg: #0f1115; --panel: #171a21; --panel-hover: #1e222b; --border: #2a2f3a;
+    --text: #e8eaed; --text-dim: #9aa1ac; --accent: #5b8cff; --danger: #b91c1c;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
     font-family: -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
-    display: flex; justify-content: center; padding: 40px 16px;
+    display: flex; height: 100vh; overflow: hidden;
   }
-  .card {
-    width: 100%; max-width: 640px; background: var(--panel);
-    border: 1px solid var(--border); border-radius: 12px; padding: 28px;
+  .sidebar {
+    width: 260px; flex-shrink: 0; background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
   }
-  h1 { margin: 0 0 6px; font-size: 1.3rem; }
-  p.sub { color: var(--text-dim); margin: 0 0 20px; font-size: 0.9rem; }
+  .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+  .sidebar-header h1 { font-size: 1rem; margin: 0 0 10px; }
+  .new-btn {
+    width: 100%; background: var(--accent); color: #fff; border: none;
+    padding: 9px; border-radius: 8px; font-size: 0.85rem; cursor: pointer;
+  }
+  .script-list { flex: 1; overflow-y: auto; padding: 8px; }
+  .script-item {
+    padding: 10px 12px; border-radius: 8px; cursor: pointer;
+    font-family: monospace; font-size: 0.82rem; color: var(--text-dim);
+    margin-bottom: 4px; word-break: break-all;
+  }
+  .script-item:hover { background: var(--panel-hover); color: var(--text); }
+  .script-item.active { background: var(--panel-hover); color: var(--accent); }
+  .empty-list { padding: 20px 12px; color: var(--text-dim); font-size: 0.85rem; }
+
+  .main { flex: 1; padding: 32px; overflow-y: auto; }
+  .main-inner { max-width: 720px; margin: 0 auto; }
+  h2 { margin: 0 0 6px; font-size: 1.2rem; }
+  p.sub { color: var(--text-dim); margin: 0 0 18px; font-size: 0.9rem; }
   textarea {
-    width: 100%; min-height: 260px; background: #0b0d11; color: #c9d1d9;
+    width: 100%; min-height: 320px; background: #0b0d11; color: #c9d1d9;
     border: 1px solid var(--border); border-radius: 8px; padding: 12px;
     font-family: "Cascadia Code", Consolas, monospace; font-size: 0.85rem;
     resize: vertical;
   }
+  .actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
   button {
-    margin-top: 14px; background: var(--accent); color: #fff; border: none;
-    padding: 10px 18px; border-radius: 8px; font-size: 0.95rem; cursor: pointer;
+    background: var(--accent); color: #fff; border: none;
+    padding: 10px 18px; border-radius: 8px; font-size: 0.9rem; cursor: pointer;
   }
+  button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  button.danger { background: var(--danger); }
   button:disabled { opacity: 0.6; cursor: not-allowed; }
+
   .result {
     margin-top: 18px; padding: 14px; background: #0b0d11;
     border: 1px solid var(--border); border-radius: 8px; display: none;
@@ -40,7 +63,7 @@
   .result label { font-size: 0.75rem; color: var(--text-dim); display: block; margin-bottom: 4px; }
   .result .row { display: flex; gap: 8px; margin-bottom: 10px; }
   .result input {
-    flex: 1; background: #171a21; border: 1px solid var(--border); color: var(--text);
+    flex: 1; background: var(--panel); border: 1px solid var(--border); color: var(--text);
     padding: 8px 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem;
   }
   .result button.copy {
@@ -48,90 +71,171 @@
     border: 1px solid var(--border); color: var(--text);
   }
   .result button.copy:hover { border-color: var(--accent); color: var(--accent); }
-  .error { color: #ff6b6b; margin-top: 10px; font-size: 0.85rem; display: none; }
-  .error.show { display: block; }
-  .success { color: #4ade80; margin-top: 10px; font-size: 0.85rem; display: none; }
-  .success.show { display: block; }
-  .section-title { margin: 32px 0 6px; font-size: 1.05rem; }
-  .btn-danger { background: #b91c1c; }
-  input#disableInput {
-    width: 100%; background: #0b0d11; color: #c9d1d9;
-    border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
-    font-family: monospace; font-size: 0.85rem;
-  }
+
+  .msg { margin-top: 10px; font-size: 0.85rem; display: none; }
+  .msg.error { color: #ff6b6b; }
+  .msg.success { color: #4ade80; }
+  .msg.show { display: block; }
 </style>
 </head>
 <body>
-  <div class="card">
-    <h1>上傳您的 Roblox 腳本</h1>
-    <p class="sub">貼上腳本內容，上傳後會產生一個可公開存取的原始檔連結。</p>
-    <textarea id="code" placeholder="-- 在這裡貼上您的 Lua 腳本"></textarea>
-    <br>
-    <button id="uploadBtn">上傳並產生連結</button>
-    <p class="error" id="errorMsg"></p>
-
-    <div class="result" id="result">
-      <label>原始檔連結</label>
-      <div class="row">
-        <input id="rawUrl" readonly>
-        <button class="copy" data-target="rawUrl">複製</button>
-      </div>
-      <label>執行器載入指令</label>
-      <div class="row">
-        <input id="loadCmd" readonly>
-        <button class="copy" data-target="loadCmd">複製</button>
-      </div>
-      <button class="btn-danger" id="disableJustUploaded" disabled>停用這個連結</button>
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1>已上傳的腳本</h1>
+      <button class="new-btn" id="newBtn">+ 新增腳本</button>
     </div>
+    <div class="script-list" id="scriptList">
+      <div class="empty-list">載入中...</div>
+    </div>
+  </div>
 
-    <h2 class="section-title">停用舊的腳本連結</h2>
-    <p class="sub">貼上腳本 ID 或完整連結，停用後該連結會永久失效。</p>
-    <input id="disableInput" placeholder="例如：AbCd1234 或 https://.../7zx67/AbCd1234">
-    <button class="btn-danger" id="disableBtn">停用</button>
-    <p class="error" id="disableError"></p>
-    <p class="success" id="disableSuccess"></p>
+  <div class="main">
+    <div class="main-inner">
+      <h2 id="pageTitle">新增腳本</h2>
+      <p class="sub" id="pageSub">貼上腳本內容，上傳後會產生一個可公開存取的原始檔連結。</p>
+      <textarea id="code" placeholder="-- 在這裡貼上您的 Lua 腳本"></textarea>
+
+      <div class="actions">
+        <button id="uploadBtn">上傳並產生連結</button>
+        <button class="secondary" id="updateBtn" style="display:none">儲存變更</button>
+        <button class="danger" id="disableBtn" style="display:none">停用這個腳本</button>
+      </div>
+
+      <p class="msg error" id="errorMsg"></p>
+      <p class="msg success" id="successMsg"></p>
+
+      <div class="result" id="result">
+        <label>原始檔連結</label>
+        <div class="row">
+          <input id="rawUrl" readonly>
+          <button class="copy" data-target="rawUrl">複製</button>
+        </div>
+        <label>執行器載入指令</label>
+        <div class="row">
+          <input id="loadCmd" readonly>
+          <button class="copy" data-target="loadCmd">複製</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
-    const uploadBtn = document.getElementById("uploadBtn");
+    const scriptList = document.getElementById("scriptList");
+    const newBtn = document.getElementById("newBtn");
+    const pageTitle = document.getElementById("pageTitle");
+    const pageSub = document.getElementById("pageSub");
     const codeInput = document.getElementById("code");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const updateBtn = document.getElementById("updateBtn");
+    const disableBtn = document.getElementById("disableBtn");
+    const errorMsg = document.getElementById("errorMsg");
+    const successMsg = document.getElementById("successMsg");
     const result = document.getElementById("result");
     const rawUrlInput = document.getElementById("rawUrl");
     const loadCmdInput = document.getElementById("loadCmd");
-    const errorMsg = document.getElementById("errorMsg");
-    const disableJustUploaded = document.getElementById("disableJustUploaded");
-    const disableInput = document.getElementById("disableInput");
-    const disableBtn = document.getElementById("disableBtn");
-    const disableError = document.getElementById("disableError");
-    const disableSuccess = document.getElementById("disableSuccess");
 
-    let lastUploadedId = null;
+    let currentId = null; // null = 新增模式
 
-    function extractId(value) {
-      const trimmed = value.trim();
-      const match = trimmed.match(/\/7zx67\/([A-Za-z0-9_-]+)/);
-      if (match) return match[1];
-      if (/^[A-Za-z0-9_-]+$/.test(trimmed)) return trimmed;
-      return null;
+    function origin() {
+      return window.location.origin;
     }
 
-    async function disableId(id) {
-      const res = await fetch("/api/disable", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
+    function rawUrlFor(id) {
+      return `${origin()}/7zx67/${id}`;
+    }
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.classList.add("show");
+      successMsg.classList.remove("show");
+    }
+    function showSuccess(msg) {
+      successMsg.textContent = msg;
+      successMsg.classList.add("show");
+      errorMsg.classList.remove("show");
+    }
+    function clearMsgs() {
+      errorMsg.classList.remove("show");
+      successMsg.classList.remove("show");
+    }
+
+    async function loadList() {
+      try {
+        const res = await fetch("/api/scripts");
+        const data = await res.json();
+        renderList(data.ids || []);
+      } catch {
+        scriptList.innerHTML = '<div class="empty-list">清單載入失敗</div>';
+      }
+    }
+
+    function renderList(ids) {
+      if (ids.length === 0) {
+        scriptList.innerHTML = '<div class="empty-list">還沒有任何腳本</div>';
+        return;
+      }
+      scriptList.innerHTML = "";
+      ids.forEach((id) => {
+        const item = document.createElement("div");
+        item.className = "script-item" + (id === currentId ? " active" : "");
+        item.textContent = id;
+        item.addEventListener("click", () => selectScript(id));
+        scriptList.appendChild(item);
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "停用失敗");
-      return data;
     }
+
+    function setMode(mode) {
+      if (mode === "new") {
+        currentId = null;
+        pageTitle.textContent = "新增腳本";
+        pageSub.textContent = "貼上腳本內容，上傳後會產生一個可公開存取的原始檔連結。";
+        codeInput.value = "";
+        uploadBtn.style.display = "";
+        updateBtn.style.display = "none";
+        disableBtn.style.display = "none";
+        result.classList.remove("show");
+      } else {
+        pageSub.textContent = `正在編輯：${currentId}`;
+        uploadBtn.style.display = "none";
+        updateBtn.style.display = "";
+        disableBtn.style.display = "";
+      }
+      clearMsgs();
+      loadList();
+    }
+
+    async function selectScript(id) {
+      clearMsgs();
+      currentId = id;
+      pageTitle.textContent = "編輯腳本";
+      pageSub.textContent = `正在編輯：${id}`;
+      codeInput.value = "載入中...";
+      uploadBtn.style.display = "none";
+      updateBtn.style.display = "";
+      disableBtn.style.display = "";
+      result.classList.add("show");
+      rawUrlInput.value = rawUrlFor(id);
+      loadCmdInput.value = `loadstring(game:HttpGet("${rawUrlFor(id)}"))()`;
+      loadList();
+
+      try {
+        const res = await fetch(`/api/scripts/${id}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "載入失敗");
+        codeInput.value = data.code;
+      } catch (err) {
+        showError(err.message);
+        codeInput.value = "";
+      }
+    }
+
+    newBtn.addEventListener("click", () => setMode("new"));
 
     uploadBtn.addEventListener("click", async () => {
       const code = codeInput.value;
-      errorMsg.classList.remove("show");
+      clearMsgs();
       if (!code.trim()) {
-        errorMsg.textContent = "請先貼上腳本內容。";
-        errorMsg.classList.add("show");
+        showError("請先貼上腳本內容。");
         return;
       }
       uploadBtn.disabled = true;
@@ -146,56 +250,67 @@
         if (!res.ok) throw new Error(data.error || "上傳失敗");
         rawUrlInput.value = data.rawUrl;
         loadCmdInput.value = `loadstring(game:HttpGet("${data.rawUrl}"))()`;
-        lastUploadedId = data.id;
-        disableJustUploaded.disabled = false;
-        disableJustUploaded.textContent = "停用這個連結";
         result.classList.add("show");
+        currentId = data.id;
+        pageTitle.textContent = "編輯腳本";
+        showSuccess("上傳成功！");
+        loadList();
       } catch (err) {
-        errorMsg.textContent = err.message;
-        errorMsg.classList.add("show");
+        showError(err.message);
       } finally {
         uploadBtn.disabled = false;
         uploadBtn.textContent = "上傳並產生連結";
       }
     });
 
-    disableJustUploaded.addEventListener("click", async () => {
-      if (!lastUploadedId) return;
-      disableJustUploaded.disabled = true;
-      disableJustUploaded.textContent = "停用中...";
+    updateBtn.addEventListener("click", async () => {
+      if (!currentId) return;
+      const code = codeInput.value;
+      clearMsgs();
+      if (!code.trim()) {
+        showError("內容不可為空。");
+        return;
+      }
+      updateBtn.disabled = true;
+      updateBtn.textContent = "儲存中...";
       try {
-        await disableId(lastUploadedId);
-        disableJustUploaded.textContent = "已停用";
+        const res = await fetch(`/api/scripts/${currentId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "更新失敗");
+        showSuccess("已儲存變更。");
       } catch (err) {
-        errorMsg.textContent = err.message;
-        errorMsg.classList.add("show");
-        disableJustUploaded.disabled = false;
-        disableJustUploaded.textContent = "停用這個連結";
+        showError(err.message);
+      } finally {
+        updateBtn.disabled = false;
+        updateBtn.textContent = "儲存變更";
       }
     });
 
     disableBtn.addEventListener("click", async () => {
-      disableError.classList.remove("show");
-      disableSuccess.classList.remove("show");
-      const id = extractId(disableInput.value);
-      if (!id) {
-        disableError.textContent = "請輸入有效的腳本 ID 或連結。";
-        disableError.classList.add("show");
-        return;
-      }
+      if (!currentId) return;
+      if (!confirm(`確定要停用「${currentId}」嗎？停用後連結會永久失效。`)) return;
+      clearMsgs();
       disableBtn.disabled = true;
       disableBtn.textContent = "停用中...";
       try {
-        await disableId(id);
-        disableSuccess.textContent = `已停用：${id}`;
-        disableSuccess.classList.add("show");
-        disableInput.value = "";
+        const res = await fetch("/api/disable", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: currentId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "停用失敗");
+        showSuccess(`已停用：${currentId}`);
+        setMode("new");
       } catch (err) {
-        disableError.textContent = err.message;
-        disableError.classList.add("show");
+        showError(err.message);
       } finally {
         disableBtn.disabled = false;
-        disableBtn.textContent = "停用";
+        disableBtn.textContent = "停用這個腳本";
       }
     });
 
@@ -208,6 +323,8 @@
         setTimeout(() => (btn.textContent = original), 1200);
       });
     });
+
+    loadList();
   </script>
 </body>
 </html>

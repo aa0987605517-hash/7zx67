@@ -10,7 +10,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { saveScript, loadScript, deleteScript, USE_GIST } = require("./storage");
+const { saveScript, loadScript, deleteScript, listScripts, USE_GIST } = require("./storage");
 
 const PORT = process.env.PORT || 3000;
 const ROUTE_PREFIX = "7zx67"; // 連結路徑前綴，例如 /7zx67/xxxx
@@ -94,6 +94,63 @@ const server = http.createServer((req, res) => {
         .catch(() => {
           sendJson(res, 500, { error: "儲存失敗" });
         });
+    });
+    return;
+  }
+
+  // 列出所有已上傳的腳本 ID
+  if (req.method === "GET" && url.pathname === "/api/scripts") {
+    listScripts()
+      .then((ids) => sendJson(res, 200, { ids }))
+      .catch(() => sendJson(res, 500, { error: "讀取清單失敗" }));
+    return;
+  }
+
+  // 取得單一腳本內容（供編輯用，管理介面專用，不受 User-Agent 限制）
+  const manageMatch = url.pathname.match(/^\/api\/scripts\/([A-Za-z0-9_-]+)$/);
+  if (req.method === "GET" && manageMatch) {
+    loadScript(manageMatch[1]).then((code) => {
+      if (code === null) {
+        sendJson(res, 404, { error: "找不到這個腳本" });
+        return;
+      }
+      sendJson(res, 200, { id: manageMatch[1], code });
+    });
+    return;
+  }
+
+  // 更新既有腳本內容
+  if (req.method === "PUT" && manageMatch) {
+    let size = 0;
+    const chunks = [];
+    let aborted = false;
+    req.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > MAX_BODY_BYTES) {
+        aborted = true;
+        sendJson(res, 413, { error: "腳本內容過大（上限 200KB）" });
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => {
+      if (aborted) return;
+      let payload;
+      try {
+        payload = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      } catch {
+        sendJson(res, 400, { error: "請求格式錯誤，需為 JSON" });
+        return;
+      }
+      const code = payload && payload.code;
+      if (typeof code !== "string" || code.trim().length === 0) {
+        sendJson(res, 400, { error: "腳本內容不可為空" });
+        return;
+      }
+      saveScript(manageMatch[1], code)
+        .then(() => sendJson(res, 200, { id: manageMatch[1], updated: true }))
+        .catch(() => sendJson(res, 500, { error: "更新失敗" }));
     });
     return;
   }

@@ -107,4 +107,27 @@ async function deleteScript(id) {
   });
 }
 
-module.exports = { saveScript, loadScript, deleteScript, USE_GIST };
+async function listScripts() {
+  if (USE_GIST) {
+    const res = await githubRequest("GET", `/gists/${GIST_ID}`);
+    if (res.status >= 300) return [];
+    const files = res.body.files || {};
+    return Object.keys(files)
+      .filter((name) => name.endsWith(".lua"))
+      .map((name) => name.slice(0, -4))
+      .sort();
+  }
+  return new Promise((resolve) => {
+    fs.readdir(SCRIPTS_DIR, (err, entries) => {
+      if (err) return resolve([]);
+      resolve(
+        entries
+          .filter((name) => name.endsWith(".lua"))
+          .map((name) => name.slice(0, -4))
+          .sort()
+      );
+    });
+  });
+}
+
+module.exports = { saveScript, loadScript, deleteScript, listScripts, USE_GIST };
