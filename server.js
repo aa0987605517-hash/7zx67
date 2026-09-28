@@ -10,14 +10,12 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { saveScript, loadScript, USE_GIST } = require("./storage");
 
 const PORT = process.env.PORT || 3000;
 const ROUTE_PREFIX = "7zx67"; // 連結路徑前綴，例如 /7zx67/xxxx
-const SCRIPTS_DIR = path.join(__dirname, "scripts");
 const PUBLIC_DIR = path.join(__dirname, "public");
 const MAX_BODY_BYTES = 200 * 1024; // 200KB 上限，避免濫用
-
-if (!fs.existsSync(SCRIPTS_DIR)) fs.mkdirSync(SCRIPTS_DIR, { recursive: true });
 
 function safeId() {
   return crypto.randomBytes(6).toString("base64url");
@@ -87,16 +85,15 @@ const server = http.createServer((req, res) => {
       }
 
       const id = safeId();
-      const filePath = path.join(SCRIPTS_DIR, `${id}.lua`);
-      fs.writeFile(filePath, code, "utf8", (err) => {
-        if (err) {
+      saveScript(id, code)
+        .then(() => {
+          const proto = req.headers["x-forwarded-proto"] || url.protocol.replace(":", "");
+          const rawUrl = `${proto}://${req.headers.host}/${ROUTE_PREFIX}/${id}`;
+          sendJson(res, 200, { id, rawUrl });
+        })
+        .catch(() => {
           sendJson(res, 500, { error: "儲存失敗" });
-          return;
-        }
-        const proto = req.headers["x-forwarded-proto"] || url.protocol.replace(":", "");
-        const rawUrl = `${proto}://${req.headers.host}/${ROUTE_PREFIX}/${id}`;
-        sendJson(res, 200, { id, rawUrl });
-      });
+        });
     });
     return;
   }
@@ -116,9 +113,8 @@ const server = http.createServer((req, res) => {
     }
 
     const id = match[1];
-    const filePath = path.join(SCRIPTS_DIR, `${id}.lua`);
-    fs.readFile(filePath, "utf8", (err, data) => {
-      if (err) {
+    loadScript(id).then((data) => {
+      if (data === null) {
         res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
         res.end("找不到這個腳本");
         return;
@@ -138,4 +134,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`腳本代管伺服器已啟動： http://localhost:${PORT}`);
+  console.log(`儲存模式： ${USE_GIST ? "GitHub Gist（持久化）" : "本機檔案（伺服器重啟會遺失）"}`);
 });
