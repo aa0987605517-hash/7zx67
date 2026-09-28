@@ -226,7 +226,7 @@ const server = http.createServer((req, res) => {
     const ua = (req.headers["user-agent"] || "").toLowerCase();
     if (!ua.includes("roblox")) {
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-      res.end("Not found");
+      res.end("別看了小臭寶");
       return;
     }
 
