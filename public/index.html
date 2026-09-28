@@ -1,18 +1,18 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>腳本管理</title>
+<title>Script Manager</title>
 <style>
   :root {
-    --bg: #0f1115; --panel: #171a21; --panel-hover: #1e222b; --border: #2a2f3a;
-    --text: #e8eaed; --text-dim: #9aa1ac; --accent: #5b8cff; --danger: #b91c1c;
+    --bg: #ffffff; --panel: #f5f6f8; --panel-hover: #eceef1; --border: #dde1e6;
+    --text: #1a1d21; --text-dim: #6b7280; --accent: #3b6fe0; --danger: #dc2626;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font-family: -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
+    font-family: -apple-system, "Segoe UI", sans-serif;
     display: flex; height: 100vh; overflow: hidden;
   }
   .sidebar {
@@ -33,7 +33,7 @@
     margin-bottom: 4px; word-break: break-all;
   }
   .script-item:hover { background: var(--panel-hover); color: var(--text); }
-  .script-item.active { background: var(--panel-hover); color: var(--accent); }
+  .script-item.active { background: #e4ebff; color: var(--accent); }
   .empty-list { padding: 20px 12px; color: var(--text-dim); font-size: 0.85rem; }
 
   .main { flex: 1; padding: 32px; overflow-y: auto; }
@@ -43,12 +43,12 @@
   .field-label { display: block; font-size: 0.78rem; color: var(--text-dim); margin-bottom: 6px; }
   #nameField { margin-bottom: 14px; }
   #customName {
-    width: 100%; background: #0b0d11; color: var(--text);
+    width: 100%; background: #fff; color: var(--text);
     border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px;
     font-family: monospace; font-size: 0.85rem;
   }
   textarea {
-    width: 100%; min-height: 320px; background: #0b0d11; color: #c9d1d9;
+    width: 100%; min-height: 320px; background: #fff; color: #1a1d21;
     border: 1px solid var(--border); border-radius: 8px; padding: 12px;
     font-family: "Cascadia Code", Consolas, monospace; font-size: 0.85rem;
     resize: vertical;
@@ -63,14 +63,14 @@
   button:disabled { opacity: 0.6; cursor: not-allowed; }
 
   .result {
-    margin-top: 18px; padding: 14px; background: #0b0d11;
+    margin-top: 18px; padding: 14px; background: var(--panel);
     border: 1px solid var(--border); border-radius: 8px; display: none;
   }
   .result.show { display: block; }
   .result label { font-size: 0.75rem; color: var(--text-dim); display: block; margin-bottom: 4px; }
   .result .row { display: flex; gap: 8px; margin-bottom: 10px; }
   .result input {
-    flex: 1; background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    flex: 1; background: #fff; border: 1px solid var(--border); color: var(--text);
     padding: 8px 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem;
   }
   .result button.copy {
@@ -80,51 +80,51 @@
   .result button.copy:hover { border-color: var(--accent); color: var(--accent); }
 
   .msg { margin-top: 10px; font-size: 0.85rem; display: none; }
-  .msg.error { color: #ff6b6b; }
-  .msg.success { color: #4ade80; }
+  .msg.error { color: #dc2626; }
+  .msg.success { color: #16a34a; }
   .msg.show { display: block; }
 </style>
 </head>
 <body>
   <div class="sidebar">
     <div class="sidebar-header">
-      <h1>已上傳的腳本</h1>
-      <button class="new-btn" id="newBtn">+ 新增腳本</button>
+      <h1>Uploaded Scripts</h1>
+      <button class="new-btn" id="newBtn">+ New Script</button>
     </div>
     <div class="script-list" id="scriptList">
-      <div class="empty-list">載入中...</div>
+      <div class="empty-list">Loading...</div>
     </div>
   </div>
 
   <div class="main">
     <div class="main-inner">
-      <h2 id="pageTitle">新增腳本</h2>
-      <p class="sub" id="pageSub">貼上腳本內容，上傳後會產生一個可公開存取的原始檔連結。</p>
+      <h2 id="pageTitle">New Script</h2>
+      <p class="sub" id="pageSub">Paste your script content below. Uploading creates a publicly accessible raw link.</p>
       <div id="nameField">
-        <label class="field-label">自訂連結名稱（選填，留空則自動產生亂碼）</label>
-        <input id="customName" placeholder="例如：my-script（只能英數字、-、_）">
+        <label class="field-label">Custom link name (optional, leave blank for a random ID)</label>
+        <input id="customName" placeholder="e.g. my-script (letters, numbers, - and _ only)">
       </div>
-      <textarea id="code" placeholder="-- 在這裡貼上您的 Lua 腳本"></textarea>
+      <textarea id="code" placeholder="-- Paste your Lua script here"></textarea>
 
       <div class="actions">
-        <button id="uploadBtn">上傳並產生連結</button>
-        <button class="secondary" id="updateBtn" style="display:none">儲存變更</button>
-        <button class="danger" id="disableBtn" style="display:none">停用這個腳本</button>
+        <button id="uploadBtn">Upload &amp; Get Link</button>
+        <button class="secondary" id="updateBtn" style="display:none">Save Changes</button>
+        <button class="danger" id="disableBtn" style="display:none">Disable This Script</button>
       </div>
 
       <p class="msg error" id="errorMsg"></p>
       <p class="msg success" id="successMsg"></p>
 
       <div class="result" id="result">
-        <label>原始檔連結</label>
+        <label>Raw file link</label>
         <div class="row">
           <input id="rawUrl" readonly>
-          <button class="copy" data-target="rawUrl">複製</button>
+          <button class="copy" data-target="rawUrl">Copy</button>
         </div>
-        <label>執行器載入指令</label>
+        <label>Executor load command</label>
         <div class="row">
           <input id="loadCmd" readonly>
-          <button class="copy" data-target="loadCmd">複製</button>
+          <button class="copy" data-target="loadCmd">Copy</button>
         </div>
       </div>
     </div>
@@ -147,7 +147,7 @@
     const rawUrlInput = document.getElementById("rawUrl");
     const loadCmdInput = document.getElementById("loadCmd");
 
-    let currentId = null; // null = 新增模式
+    let currentId = null; // null = new-script mode
 
     function origin() {
       return window.location.origin;
@@ -178,13 +178,13 @@
         const data = await res.json();
         renderList(data.ids || []);
       } catch {
-        scriptList.innerHTML = '<div class="empty-list">清單載入失敗</div>';
+        scriptList.innerHTML = '<div class="empty-list">Failed to load list</div>';
       }
     }
 
     function renderList(ids) {
       if (ids.length === 0) {
-        scriptList.innerHTML = '<div class="empty-list">還沒有任何腳本</div>';
+        scriptList.innerHTML = '<div class="empty-list">No scripts yet</div>';
         return;
       }
       scriptList.innerHTML = "";
@@ -200,8 +200,8 @@
     function setMode(mode) {
       if (mode === "new") {
         currentId = null;
-        pageTitle.textContent = "新增腳本";
-        pageSub.textContent = "貼上腳本內容，上傳後會產生一個可公開存取的原始檔連結。";
+        pageTitle.textContent = "New Script";
+        pageSub.textContent = "Paste your script content below. Uploading creates a publicly accessible raw link.";
         codeInput.value = "";
         customNameInput.value = "";
         nameField.style.display = "";
@@ -210,7 +210,7 @@
         disableBtn.style.display = "none";
         result.classList.remove("show");
       } else {
-        pageSub.textContent = `正在編輯：${currentId}`;
+        pageSub.textContent = `Editing: ${currentId}`;
         nameField.style.display = "none";
         uploadBtn.style.display = "none";
         updateBtn.style.display = "";
@@ -223,9 +223,9 @@
     async function selectScript(id) {
       clearMsgs();
       currentId = id;
-      pageTitle.textContent = "編輯腳本";
-      pageSub.textContent = `正在編輯：${id}`;
-      codeInput.value = "載入中...";
+      pageTitle.textContent = "Edit Script";
+      pageSub.textContent = `Editing: ${id}`;
+      codeInput.value = "Loading...";
       nameField.style.display = "none";
       uploadBtn.style.display = "none";
       updateBtn.style.display = "";
@@ -238,7 +238,7 @@
       try {
         const res = await fetch(`/api/scripts/${id}`);
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "載入失敗");
+        if (!res.ok) throw new Error(data.error || "Failed to load");
         codeInput.value = data.code;
       } catch (err) {
         showError(err.message);
@@ -252,11 +252,11 @@
       const code = codeInput.value;
       clearMsgs();
       if (!code.trim()) {
-        showError("請先貼上腳本內容。");
+        showError("Please paste some script content first.");
         return;
       }
       uploadBtn.disabled = true;
-      uploadBtn.textContent = "上傳中...";
+      uploadBtn.textContent = "Uploading...";
       try {
         const name = customNameInput.value.trim();
         const res = await fetch("/api/upload", {
@@ -265,19 +265,19 @@
           body: JSON.stringify({ code, name: name || undefined }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "上傳失敗");
+        if (!res.ok) throw new Error(data.error || "Upload failed");
         rawUrlInput.value = data.rawUrl;
         loadCmdInput.value = `loadstring(game:HttpGet("${data.rawUrl}"))()`;
         result.classList.add("show");
         currentId = data.id;
-        pageTitle.textContent = "編輯腳本";
-        showSuccess("上傳成功！");
+        pageTitle.textContent = "Edit Script";
+        showSuccess("Uploaded successfully!");
         loadList();
       } catch (err) {
         showError(err.message);
       } finally {
         uploadBtn.disabled = false;
-        uploadBtn.textContent = "上傳並產生連結";
+        uploadBtn.textContent = "Upload & Get Link";
       }
     });
 
@@ -286,11 +286,11 @@
       const code = codeInput.value;
       clearMsgs();
       if (!code.trim()) {
-        showError("內容不可為空。");
+        showError("Content cannot be empty.");
         return;
       }
       updateBtn.disabled = true;
-      updateBtn.textContent = "儲存中...";
+      updateBtn.textContent = "Saving...";
       try {
         const res = await fetch(`/api/scripts/${currentId}`, {
           method: "PUT",
@@ -298,22 +298,22 @@
           body: JSON.stringify({ code }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "更新失敗");
-        showSuccess("已儲存變更。");
+        if (!res.ok) throw new Error(data.error || "Update failed");
+        showSuccess("Changes saved.");
       } catch (err) {
         showError(err.message);
       } finally {
         updateBtn.disabled = false;
-        updateBtn.textContent = "儲存變更";
+        updateBtn.textContent = "Save Changes";
       }
     });
 
     disableBtn.addEventListener("click", async () => {
       if (!currentId) return;
-      if (!confirm(`確定要停用「${currentId}」嗎？停用後連結會永久失效。`)) return;
+      if (!confirm(`Disable "${currentId}"? The link will stop working permanently.`)) return;
       clearMsgs();
       disableBtn.disabled = true;
-      disableBtn.textContent = "停用中...";
+      disableBtn.textContent = "Disabling...";
       try {
         const res = await fetch("/api/disable", {
           method: "POST",
@@ -321,14 +321,14 @@
           body: JSON.stringify({ id: currentId }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "停用失敗");
-        showSuccess(`已停用：${currentId}`);
+        if (!res.ok) throw new Error(data.error || "Disable failed");
+        showSuccess(`Disabled: ${currentId}`);
         setMode("new");
       } catch (err) {
         showError(err.message);
       } finally {
         disableBtn.disabled = false;
-        disableBtn.textContent = "停用這個腳本";
+        disableBtn.textContent = "Disable This Script";
       }
     });
 
@@ -337,7 +337,7 @@
         const target = document.getElementById(btn.dataset.target);
         await navigator.clipboard.writeText(target.value);
         const original = btn.textContent;
-        btn.textContent = "已複製！";
+        btn.textContent = "Copied!";
         setTimeout(() => (btn.textContent = original), 1200);
       });
     });
