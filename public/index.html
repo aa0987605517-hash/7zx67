@@ -50,6 +50,15 @@
   .result button.copy:hover { border-color: var(--accent); color: var(--accent); }
   .error { color: #ff6b6b; margin-top: 10px; font-size: 0.85rem; display: none; }
   .error.show { display: block; }
+  .success { color: #4ade80; margin-top: 10px; font-size: 0.85rem; display: none; }
+  .success.show { display: block; }
+  .section-title { margin: 32px 0 6px; font-size: 1.05rem; }
+  .btn-danger { background: #b91c1c; }
+  input#disableInput {
+    width: 100%; background: #0b0d11; color: #c9d1d9;
+    border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+    font-family: monospace; font-size: 0.85rem;
+  }
 </style>
 </head>
 <body>
@@ -72,7 +81,15 @@
         <input id="loadCmd" readonly>
         <button class="copy" data-target="loadCmd">複製</button>
       </div>
+      <button class="btn-danger" id="disableJustUploaded" disabled>停用這個連結</button>
     </div>
+
+    <h2 class="section-title">停用舊的腳本連結</h2>
+    <p class="sub">貼上腳本 ID 或完整連結，停用後該連結會永久失效。</p>
+    <input id="disableInput" placeholder="例如：AbCd1234 或 https://.../7zx67/AbCd1234">
+    <button class="btn-danger" id="disableBtn">停用</button>
+    <p class="error" id="disableError"></p>
+    <p class="success" id="disableSuccess"></p>
   </div>
 
   <script>
@@ -82,6 +99,32 @@
     const rawUrlInput = document.getElementById("rawUrl");
     const loadCmdInput = document.getElementById("loadCmd");
     const errorMsg = document.getElementById("errorMsg");
+    const disableJustUploaded = document.getElementById("disableJustUploaded");
+    const disableInput = document.getElementById("disableInput");
+    const disableBtn = document.getElementById("disableBtn");
+    const disableError = document.getElementById("disableError");
+    const disableSuccess = document.getElementById("disableSuccess");
+
+    let lastUploadedId = null;
+
+    function extractId(value) {
+      const trimmed = value.trim();
+      const match = trimmed.match(/\/7zx67\/([A-Za-z0-9_-]+)/);
+      if (match) return match[1];
+      if (/^[A-Za-z0-9_-]+$/.test(trimmed)) return trimmed;
+      return null;
+    }
+
+    async function disableId(id) {
+      const res = await fetch("/api/disable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "停用失敗");
+      return data;
+    }
 
     uploadBtn.addEventListener("click", async () => {
       const code = codeInput.value;
@@ -103,6 +146,9 @@
         if (!res.ok) throw new Error(data.error || "上傳失敗");
         rawUrlInput.value = data.rawUrl;
         loadCmdInput.value = `loadstring(game:HttpGet("${data.rawUrl}"))()`;
+        lastUploadedId = data.id;
+        disableJustUploaded.disabled = false;
+        disableJustUploaded.textContent = "停用這個連結";
         result.classList.add("show");
       } catch (err) {
         errorMsg.textContent = err.message;
@@ -110,6 +156,46 @@
       } finally {
         uploadBtn.disabled = false;
         uploadBtn.textContent = "上傳並產生連結";
+      }
+    });
+
+    disableJustUploaded.addEventListener("click", async () => {
+      if (!lastUploadedId) return;
+      disableJustUploaded.disabled = true;
+      disableJustUploaded.textContent = "停用中...";
+      try {
+        await disableId(lastUploadedId);
+        disableJustUploaded.textContent = "已停用";
+      } catch (err) {
+        errorMsg.textContent = err.message;
+        errorMsg.classList.add("show");
+        disableJustUploaded.disabled = false;
+        disableJustUploaded.textContent = "停用這個連結";
+      }
+    });
+
+    disableBtn.addEventListener("click", async () => {
+      disableError.classList.remove("show");
+      disableSuccess.classList.remove("show");
+      const id = extractId(disableInput.value);
+      if (!id) {
+        disableError.textContent = "請輸入有效的腳本 ID 或連結。";
+        disableError.classList.add("show");
+        return;
+      }
+      disableBtn.disabled = true;
+      disableBtn.textContent = "停用中...";
+      try {
+        await disableId(id);
+        disableSuccess.textContent = `已停用：${id}`;
+        disableSuccess.classList.add("show");
+        disableInput.value = "";
+      } catch (err) {
+        disableError.textContent = err.message;
+        disableError.classList.add("show");
+      } finally {
+        disableBtn.disabled = false;
+        disableBtn.textContent = "停用";
       }
     });
 

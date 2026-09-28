@@ -92,4 +92,19 @@ async function loadScript(id) {
   });
 }
 
-module.exports = { saveScript, loadScript, USE_GIST };
+async function deleteScript(id) {
+  if (USE_GIST) {
+    const res = await githubRequest("PATCH", `/gists/${GIST_ID}`, {
+      files: { [`${id}.lua`]: null },
+    });
+    if (res.status >= 300) {
+      throw new Error(`Gist 刪除失敗: ${res.status} ${JSON.stringify(res.body)}`);
+    }
+    return;
+  }
+  return new Promise((resolve) => {
+    fs.unlink(path.join(SCRIPTS_DIR, `${id}.lua`), () => resolve());
+  });
+}
+
+module.exports = { saveScript, loadScript, deleteScript, USE_GIST };

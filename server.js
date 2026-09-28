@@ -10,7 +10,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { saveScript, loadScript, USE_GIST } = require("./storage");
+const { saveScript, loadScript, deleteScript, USE_GIST } = require("./storage");
 
 const PORT = process.env.PORT || 3000;
 const ROUTE_PREFIX = "7zx67"; // 連結路徑前綴，例如 /7zx67/xxxx
@@ -94,6 +94,38 @@ const server = http.createServer((req, res) => {
         .catch(() => {
           sendJson(res, 500, { error: "儲存失敗" });
         });
+    });
+    return;
+  }
+
+  // 停用（刪除）指定的腳本
+  if (req.method === "POST" && url.pathname === "/api/disable") {
+    let size = 0;
+    const chunks = [];
+    req.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > 1024) {
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => {
+      let payload;
+      try {
+        payload = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      } catch {
+        sendJson(res, 400, { error: "請求格式錯誤，需為 JSON" });
+        return;
+      }
+      const id = payload && payload.id;
+      if (typeof id !== "string" || !/^[A-Za-z0-9_-]+$/.test(id)) {
+        sendJson(res, 400, { error: "無效的腳本 ID" });
+        return;
+      }
+      deleteScript(id)
+        .then(() => sendJson(res, 200, { id, disabled: true }))
+        .catch(() => sendJson(res, 500, { error: "停用失敗" }));
     });
     return;
   }
