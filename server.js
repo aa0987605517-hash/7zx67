@@ -93,7 +93,8 @@ const server = http.createServer((req, res) => {
           sendJson(res, 500, { error: "儲存失敗" });
           return;
         }
-        const rawUrl = `${url.protocol}//${req.headers.host}/${ROUTE_PREFIX}/${id}`;
+        const proto = req.headers["x-forwarded-proto"] || url.protocol.replace(":", "");
+        const rawUrl = `${proto}://${req.headers.host}/${ROUTE_PREFIX}/${id}`;
         sendJson(res, 200, { id, rawUrl });
       });
     });
