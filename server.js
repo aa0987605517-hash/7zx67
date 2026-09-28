@@ -84,16 +84,45 @@ const server = http.createServer((req, res) => {
         return;
       }
 
-      const id = safeId();
-      saveScript(id, code)
-        .then(() => {
-          const proto = req.headers["x-forwarded-proto"] || url.protocol.replace(":", "");
-          const rawUrl = `${proto}://${req.headers.host}/${ROUTE_PREFIX}/${id}`;
-          sendJson(res, 200, { id, rawUrl });
-        })
-        .catch(() => {
-          sendJson(res, 500, { error: "儲存失敗" });
+      const customName = payload && payload.name;
+      let id;
+      if (customName !== undefined && customName !== null && customName !== "") {
+        if (typeof customName !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(customName)) {
+          sendJson(res, 400, { error: "自訂名稱只能包含英數字、底線、連字號，長度 1~64" });
+          return;
+        }
+        if (customName.toLowerCase() === "readme") {
+          sendJson(res, 400, { error: "這個名稱是保留字，請換一個" });
+          return;
+        }
+        id = customName;
+      } else {
+        id = safeId();
+      }
+
+      const proceed = () => {
+        saveScript(id, code)
+          .then(() => {
+            const proto = req.headers["x-forwarded-proto"] || url.protocol.replace(":", "");
+            const rawUrl = `${proto}://${req.headers.host}/${ROUTE_PREFIX}/${id}`;
+            sendJson(res, 200, { id, rawUrl });
+          })
+          .catch(() => {
+            sendJson(res, 500, { error: "儲存失敗" });
+          });
+      };
+
+      if (customName) {
+        loadScript(id).then((existing) => {
+          if (existing !== null) {
+            sendJson(res, 409, { error: "這個名稱已經被使用，請換一個" });
+            return;
+          }
+          proceed();
         });
+      } else {
+        proceed();
+      }
     });
     return;
   }

@@ -40,6 +40,13 @@
   .main-inner { max-width: 720px; margin: 0 auto; }
   h2 { margin: 0 0 6px; font-size: 1.2rem; }
   p.sub { color: var(--text-dim); margin: 0 0 18px; font-size: 0.9rem; }
+  .field-label { display: block; font-size: 0.78rem; color: var(--text-dim); margin-bottom: 6px; }
+  #nameField { margin-bottom: 14px; }
+  #customName {
+    width: 100%; background: #0b0d11; color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px;
+    font-family: monospace; font-size: 0.85rem;
+  }
   textarea {
     width: 100%; min-height: 320px; background: #0b0d11; color: #c9d1d9;
     border: 1px solid var(--border); border-radius: 8px; padding: 12px;
@@ -93,6 +100,10 @@
     <div class="main-inner">
       <h2 id="pageTitle">新增腳本</h2>
       <p class="sub" id="pageSub">貼上腳本內容，上傳後會產生一個可公開存取的原始檔連結。</p>
+      <div id="nameField">
+        <label class="field-label">自訂連結名稱（選填，留空則自動產生亂碼）</label>
+        <input id="customName" placeholder="例如：my-script（只能英數字、-、_）">
+      </div>
       <textarea id="code" placeholder="-- 在這裡貼上您的 Lua 腳本"></textarea>
 
       <div class="actions">
@@ -125,6 +136,8 @@
     const pageTitle = document.getElementById("pageTitle");
     const pageSub = document.getElementById("pageSub");
     const codeInput = document.getElementById("code");
+    const customNameInput = document.getElementById("customName");
+    const nameField = document.getElementById("nameField");
     const uploadBtn = document.getElementById("uploadBtn");
     const updateBtn = document.getElementById("updateBtn");
     const disableBtn = document.getElementById("disableBtn");
@@ -190,12 +203,15 @@
         pageTitle.textContent = "新增腳本";
         pageSub.textContent = "貼上腳本內容，上傳後會產生一個可公開存取的原始檔連結。";
         codeInput.value = "";
+        customNameInput.value = "";
+        nameField.style.display = "";
         uploadBtn.style.display = "";
         updateBtn.style.display = "none";
         disableBtn.style.display = "none";
         result.classList.remove("show");
       } else {
         pageSub.textContent = `正在編輯：${currentId}`;
+        nameField.style.display = "none";
         uploadBtn.style.display = "none";
         updateBtn.style.display = "";
         disableBtn.style.display = "";
@@ -210,6 +226,7 @@
       pageTitle.textContent = "編輯腳本";
       pageSub.textContent = `正在編輯：${id}`;
       codeInput.value = "載入中...";
+      nameField.style.display = "none";
       uploadBtn.style.display = "none";
       updateBtn.style.display = "";
       disableBtn.style.display = "";
@@ -241,10 +258,11 @@
       uploadBtn.disabled = true;
       uploadBtn.textContent = "上傳中...";
       try {
+        const name = customNameInput.value.trim();
         const res = await fetch("/api/upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code }),
+          body: JSON.stringify({ code, name: name || undefined }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "上傳失敗");
