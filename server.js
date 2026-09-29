@@ -16,6 +16,29 @@ const PORT = process.env.PORT || 3000;
 const ROUTE_PREFIX = "7zx67"; // 連結路徑前綴，例如 /7zx67/xxxx
 const PUBLIC_DIR = path.join(__dirname, "public");
 const MAX_BODY_BYTES = 200 * 1024; // 200KB 上限，避免濫用
+const ADMIN_USER = process.env.ADMIN_USER || "admin";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD; // 未設定時不啟用登入保護（本機測試用）
+
+function isAuthorized(req) {
+  if (!ADMIN_PASSWORD) return true; // 沒設密碼就不擋（本機開發方便）
+  const header = req.headers["authorization"] || "";
+  if (!header.startsWith("Basic ")) return false;
+  const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
+  const sep = decoded.indexOf(":");
+  const user = decoded.slice(0, sep);
+  const pass = decoded.slice(sep + 1);
+  return user === ADMIN_USER && pass === ADMIN_PASSWORD;
+}
+
+function requireAuth(req, res) {
+  if (isAuthorized(req)) return true;
+  res.writeHead(401, {
+    "WWW-Authenticate": 'Basic realm="Script Manager"',
+    "Content-Type": "text/plain; charset=utf-8",
+  });
+  res.end("Authentication required");
+  return false;
+}
 
 function safeId() {
   return crypto.randomBytes(6).toString("base64url");
@@ -44,6 +67,14 @@ function serveStatic(res, filePath, contentType) {
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
+
+  // 執行器讀取腳本的路徑保持公開，其餘所有路徑（管理頁面、上傳、清單、編輯、停用）都需要登入
+  const isPublicScriptRoute =
+    req.method === "GET" &&
+    new RegExp(`^/${ROUTE_PREFIX}/[A-Za-z0-9_-]+$`).test(url.pathname);
+  if (!isPublicScriptRoute && !requireAuth(req, res)) {
+    return;
+  }
 
   // 貼上腳本的前端頁面
   if (req.method === "GET" && url.pathname === "/") {
