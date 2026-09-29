@@ -91,10 +91,19 @@
     text-decoration: none; display: inline-block; cursor: pointer;
   }
   .discord-btn:hover { background: #4752c4; }
+
+  .logout-btn {
+    position: fixed; top: 16px; right: 190px; z-index: 10;
+    background: transparent; color: var(--text-dim); border: 1px solid var(--border);
+    padding: 9px 16px; border-radius: 8px; font-size: 0.85rem;
+    text-decoration: none; display: inline-block; cursor: pointer;
+  }
+  .logout-btn:hover { color: var(--text); border-color: var(--text-dim); }
 </style>
 </head>
 <body>
   <a class="discord-btn" href="https://discord.gg/lystore" target="_blank" rel="noopener">希望您可以加入dc:&gt;</a>
+  <a class="logout-btn" href="/logout">Log out</a>
   <div class="sidebar">
     <div class="sidebar-header">
       <h1>Uploaded Scripts</h1>
